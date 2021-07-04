@@ -1,70 +1,12 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
-#include "code2graph.h"
 #include "CYKonGraph.h"
-TEST_CASE("wrong path to the file") {
-    std::ifstream input_file, analyze_file;
-    std::string path = "./", path_to_input = "";
-    REQUIRE(process_path(2, input_file, path, path_to_input, analyze_file, 0) == -1);
-}
-
-TEST_CASE("using file input/test1.in") {
-    std::ifstream input_file, analyze_file;
-    std::string path_to_input = "", path = "tests/test1.in", full_path = std::filesystem::current_path().string() + "/" + path;
-    REQUIRE(process_path(3, input_file, path, path_to_input, analyze_file, 1) == 0);
-    REQUIRE(path_to_input == full_path);
-    full_path.erase(full_path.find_last_of("/") + 1, full_path.size()); // .../gcc-cfg-utils/input/test.in -> .../gcc-cfg-utils/input/
-    REQUIRE(path == full_path + "../examples/test1.c" + ".012t.cfg.dot");
-}
-
-TEST_CASE("path to examples/test1.c") {
-    std::ifstream input_file, analyze_file;
-    std::string path = "examples/test1.c", path_to_input = "";
-    REQUIRE(process_path(2, input_file, path, path_to_input, analyze_file, 0) == 0);
-}
-
-TEST_CASE("examples/test1.c.012t.cfg.dot") {
-    std::string inp, code = "";
-    int code_descr = 0, cluster = 0, edgeline = 0, basic_block = 0, subgraph = -1;
-    std::ifstream analyze_file("examples/test1.c.012t.cfg.dot");
-	std::vector <std::pair<std::string, std::pair<int, int>>> Clusters;
-	std::vector <std::vector<std::string>> V, Code;
-    std::vector <std::vector<std::vector<std::pair<int, std::string>>>> E;
-    while(std::getline(analyze_file, inp)) 
-	{
-		int len = inp.size();
-		if (basic_block == 0)
-			blocks_handler(code, basic_block, cluster, subgraph, inp, Clusters, V, Code, E, len);
-		else
-			code_handler(inp, basic_block, code, Code, subgraph);
-	}
-    REQUIRE(Clusters[0].first == "foo");
-    REQUIRE(Clusters[1].first == "main");
-    REQUIRE(Clusters[0].second.first == 0);
-    REQUIRE(Clusters[0].second.second == 1);
-    REQUIRE(Clusters[1].second.first == 0);
-    REQUIRE(Clusters[1].second.second == 1);
-    REQUIRE(V[0][0] == "fn_0_basic_block_0");
-    REQUIRE(Code[0][0] == "ENTRY\n");
-    REQUIRE(V[0][1] == "fn_0_basic_block_1");
-    REQUIRE(Code[0][1] == "EXIT\n");
-    REQUIRE(V[0][2] == "fn_0_basic_block_2");
-    REQUIRE(V[1][0] == "fn_1_basic_block_0");
-    REQUIRE(Code[0][0] == "ENTRY\n");
-    REQUIRE(V[1][1] == "fn_1_basic_block_1");
-    REQUIRE(Code[0][1] == "EXIT\n");
-    REQUIRE(V[1][2] == "fn_1_basic_block_2");
-    REQUIRE(V[1][3] == "fn_1_basic_block_3");
-
-    REQUIRE(V[0][E[0][0][0].first] == "fn_0_basic_block_2");
-    REQUIRE(V[0][E[0][0][1].first] == "fn_0_basic_block_1");
-    REQUIRE(V[0][E[0][2][0].first] == "fn_0_basic_block_1");
-
-    REQUIRE(V[1][E[1][0][0].first] == "fn_1_basic_block_2");
-    REQUIRE(V[1][E[1][0][1].first] == "fn_1_basic_block_1");
-    REQUIRE(V[1][E[1][2][0].first] == "fn_1_basic_block_3");
-    REQUIRE(V[1][E[1][3][0].first] == "fn_1_basic_block_1");
-}
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <filesystem>
 
 TEST_CASE("test_graph1") {
     int initial, tests;
@@ -179,5 +121,21 @@ TEST_CASE("test_graph2") {
             REQUIRE(V_names[way[1]] == "fn_1_basic_block_2");
             REQUIRE(V_names[way[2]] == "fn_1_basic_block_3");
         }
+    }
+}
+
+TEST_CASE("llvm") {
+    mkdir("data", 0777);
+    std::string path = std::filesystem::current_path().string(), s1, s2;
+    system(("python " + path + "/llvm-cfg-utils/code/llvm.py " + "-llvm " + "-file " + path + "/llvm-cfg-utils/input/llvm.in " + path + "/llvm-cfg-utils/examples/.foo.dot " + path + "/llvm-cfg-utils/examples/.main.dot").c_str());
+    std::ifstream test_graph(path + "/tests/test_graph_llvm");
+    std::ifstream graph(path + "/data/graph");
+    REQUIRE(test_graph.is_open());
+    REQUIRE(graph.is_open());
+    for (int i = 0; i < 100; i++) {
+        test_graph >> s1;
+        graph >> s2;
+        if (i != 14 && i != 15 && i != 16 && i != 17 && i != 18 && i != 47 && i != 48)
+            REQUIRE(s1 == s2);
     }
 }
