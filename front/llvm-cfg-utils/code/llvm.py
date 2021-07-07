@@ -2,14 +2,18 @@ import sys
 import subprocess
 import os
 graph = open("data/graph", "w")
-if len(sys.argv) > 1 and sys.argv[1] == "-llvm":
-    if len(sys.argv) > 3 and sys.argv[2] == "-file":
-        input_data = open(sys.argv[3]).readlines()
-        extraargs, k, is_file = 4, 0, True
-    else:
-        extraargs, k, is_file = 2, 0, False
-else:
-    extraargs, k, is_file = 1, 0, False
+
+extraargs, k, is_file = 1, 0, False
+if "-llvm" in sys.argv:
+    extraargs += 1
+if "-file" in sys.argv:
+    a = sys.argv.index("-file") + 1
+    input_data = open(sys.argv[a]).readlines()
+    extraargs += 2
+    is_file = True
+if "-front-only" in sys.argv:
+    extraargs += 1
+
 graph.write(str(len(sys.argv) - extraargs) + "\n") #print number of functions
 for fnumber in range(extraargs, len(sys.argv)): #analyze function with number fnumber
     if fnumber != extraargs:
@@ -49,5 +53,7 @@ for fnumber in range(extraargs, len(sys.argv)): #analyze function with number fn
         graph.write(str(nodes.index(edges[i][0])) + " " + str(nodes.index(edges[i][1])) + " " + letters)
 
 graph.close()
-path_to = os.path.abspath(sys.argv[0])[:os.path.abspath(sys.argv[0]).find("code")]
-proc = subprocess.call([path_to + "../build/core", path_to + "../build/"])
+
+if not "-front-only" in sys.argv:
+    path_to = os.path.abspath(sys.argv[0])[:os.path.abspath(sys.argv[0]).find("code")]
+    proc = subprocess.call([path_to + "../build/core", path_to + "../build/"])

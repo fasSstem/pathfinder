@@ -17,5 +17,6 @@ cd $absolute_path
 if [[ $1 == "-test" ]]; then
     build/test
 else
-    python llvm-cfg-utils/code/llvm.py $aarg
+    python llvm-cfg-utils/code/llvm.py -front-only $aarg
+    build/core build/
 fi
